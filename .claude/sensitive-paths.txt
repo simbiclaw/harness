@@ -1,0 +1,19 @@
+# Tier C automatic. PreToolUse hook blocks edits unless an active ExecPlan
+# has 'Awaiting Steering: resolved' for the path.
+src/auth/**
+src/payments/**
+src/billing/**
+src/schemas/**
+src/migrations/**
+migrations/**
+.env*
+.github/workflows/**
+Dockerfile
+docker-compose*.yml
+CLAUDE.md
+docs/PLANS.md
+docs/conventions/**
+package.json
+pnpm-lock.yaml
+.dependency-cruiser.cjs
+tsconfig.json

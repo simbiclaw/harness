@@ -1,0 +1,12 @@
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.18.0  # PINNED — see docs/conventions/deps-and-secrets.md
+    hooks:
+      - id: gitleaks
+  - repo: local
+    hooks:
+      - id: commit-msg-format
+        name: commit-msg trailer format
+        entry: python3 .claude/hooks/check_commit_msg.py
+        language: system
+        stages: [commit-msg]

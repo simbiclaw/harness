@@ -1,0 +1,13 @@
+# Skeleton compose file. Add services (database, cache, etc.) via ExecPlan.
+# Real environment values come from .env (gitignored), not committed here.
+
+services:
+  app:
+    build:
+      context: .
+      target: runtime
+    env_file:
+      - .env
+    ports:
+      - "3000:3000"
+    restart: unless-stopped

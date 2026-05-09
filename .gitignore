@@ -1,0 +1,32 @@
+# Secrets — never commit.
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+id_rsa*
+**/credentials.json
+**/service-account*.json
+
+# Node / TypeScript build artifacts.
+node_modules/
+dist/
+build/
+*.tsbuildinfo
+coverage/
+.vite/
+
+# Test runner.
+.vitest-cache/
+
+# OS / editor.
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Verifier subagent run logs (kept locally, not committed).
+.claude/verifier-runs/
+
+# Dep-vetter scratch.
+.claude/decisions/.scratch/
