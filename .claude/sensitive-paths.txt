@@ -17,3 +17,5 @@ package.json
 pnpm-lock.yaml
 .dependency-cruiser.cjs
 tsconfig.json
+.claude/harness-scope.json
+.claude/baselines/**

@@ -25,6 +25,38 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 SENSITIVE_PATHS_FILE = REPO_ROOT / ".claude" / "sensitive-paths.txt"
 ACTIVE_PLANS_DIR = REPO_ROOT / "docs" / "plans" / "active"
+SCOPE_FILE = REPO_ROOT / ".claude" / "harness-scope.json"
+DECISIONS_DIR = REPO_ROOT / ".claude" / "decisions"
+
+
+def _load_scope() -> dict:
+    if not SCOPE_FILE.exists():
+        return {"version": 1, "mode": "greenfield",
+                "managed_paths": ["src/**"], "legacy_paths": [],
+                "baselines": {}}
+    try:
+        return json.loads(SCOPE_FILE.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, ValueError):
+        return {"version": 1, "mode": "greenfield",
+                "managed_paths": ["src/**"], "legacy_paths": [],
+                "baselines": {}}
+
+
+def _load_amnesty_packages() -> set[str]:
+    """Return package names listed in dep-baseline-*.md amnesty files."""
+    scope = _load_scope()
+    if scope.get("mode") != "brownfield":
+        return set()
+    packages: set[str] = set()
+    for f in DECISIONS_DIR.glob("dep-baseline-*.md"):
+        if not f.name.startswith("dep-baseline-"):
+            continue
+        for line in f.read_text(encoding="utf-8").splitlines():
+            stripped = line.strip()
+            if stripped.startswith("- ") and not stripped.startswith("- #"):
+                pkg = stripped[2:].split()[0]
+                packages.add(pkg)
+    return packages
 
 
 def load_sensitive_patterns() -> list[str]:
@@ -127,20 +159,27 @@ def main() -> int:
     if tool == "Bash":
         cmd = params.get("command", "")
         package = parse_pkg_install(cmd)
-        if package and not has_dep_vet_for(package):
-            sanitized = package.replace("/", "-")
-            print(json.dumps({
-                "continue": False,
-                "reason": (
-                    f"Package '{package}' has no dep-vet record at "
-                    f".claude/decisions/dep-vet-{sanitized}.md. Per "
-                    f"docs/conventions/deps-and-secrets.md, run the "
-                    f"dep-vetter skill on '{package}' first. If approved, "
-                    f"the skill writes the dep-vet file and this hook will "
-                    f"allow the install."
-                ),
-            }))
-            return 0
+        if package:
+            amnesty = _load_amnesty_packages()
+            if package in amnesty:
+                # Pre-existing package — amnesty applies.
+                # Allow the install; the dep is grandfathered.
+                pass
+            elif not has_dep_vet_for(package):
+                sanitized = package.replace("/", "-")
+                print(json.dumps({
+                    "continue": False,
+                    "reason": (
+                        f"Package '{package}' has no dep-vet record at "
+                        f".claude/decisions/dep-vet-{sanitized}.md. Per "
+                        f"docs/conventions/deps-and-secrets.md, run the "
+                        f"dep-vetter skill on '{package}' first. If this is "
+                        f"a pre-existing package in a brownfield repo, add "
+                        f"it to a dep-baseline-YYYY-MM-DD.md amnesty file "
+                        f"under .claude/decisions/."
+                    ),
+                }))
+                return 0
 
         # Guard 3: force-push
         if is_force_push(cmd) and os.environ.get("CLAUDE_FORCE_PUSH_OK") != "1":

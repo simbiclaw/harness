@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "mode": "greenfield",
+  "managed_paths": ["src/**"],
+  "legacy_paths": [],
+  "baselines": {}
+}

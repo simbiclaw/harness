@@ -92,8 +92,17 @@ def test_layer_imports_flow_upward():
     if not SRC.exists():
         return  # Bootstrap: src/ may not exist yet.
 
-    violations: list[str] = []
+    from tests.structural.scope_helpers import (
+        is_managed_path, is_legacy_path, check_baseline, _load_scope,
+    )
+
+    scope = _load_scope()
+    mode = scope.get("mode", "greenfield")
+
+    managed_violations: list[str] = []
+    legacy_violations: list[str] = []
     extensions = (".ts", ".tsx", ".js", ".jsx", ".mts", ".cts")
+
     for src_file in SRC.rglob("*"):
         if src_file.suffix not in extensions or not src_file.is_file():
             continue
@@ -101,17 +110,54 @@ def test_layer_imports_flow_upward():
         if src_layer is None:
             continue
 
+        rel = str(src_file.relative_to(REPO_ROOT))
+
+        # In brownfield mode, partition files into managed and legacy.
+        # Managed: all violations are errors (beachhead must be clean).
+        # Legacy: violations checked against baseline (only new ones fail).
+        # Greenfield: all paths are managed implicitly.
+        if mode == "brownfield":
+            if not is_managed_path(rel) and not is_legacy_path(rel):
+                continue
+            target_list = (
+                managed_violations if is_managed_path(rel) else legacy_violations
+            )
+        else:
+            # Greenfield: every file is managed.
+            target_list = managed_violations
+
         for lineno, spec in imports_in(src_file):
             tgt_layer = resolve_layer(spec, src_file)
             if tgt_layer is None:
                 continue
             if LAYER_RANK[tgt_layer] > LAYER_RANK[src_layer]:
-                violations.append(
-                    f"{src_file.relative_to(REPO_ROOT)}:{lineno}: "
+                target_list.append(
+                    f"{rel}:{lineno}: "
                     f"layer '{src_layer}' imports from higher layer "
                     f"'{tgt_layer}' ({spec}). Imports must flow downward "
                     f"toward '{LAYERS[0]}'. Move the imported symbol to "
                     f"a layer <= {src_layer}, or invert the dependency."
                 )
 
-    assert not violations, "Layer violations:\n  " + "\n  ".join(violations)
+    failures: list[str] = []
+
+    # Managed violations always fail — the beachhead must be clean.
+    if managed_violations:
+        failures.append(
+            "Managed-path layer violations:\n  "
+            + "\n  ".join(sorted(managed_violations))
+        )
+
+    # Legacy violations are filtered through the baseline.
+    if legacy_violations:
+        new, kept = check_baseline(
+            "test_layering", set(legacy_violations), scope
+        )
+        if new:
+            failures.append(
+                "New legacy layer violations (not in baseline):\n  "
+                + "\n  ".join(sorted(new))
+                + f"\n\n{len(kept)} baselined violation(s) remain."
+            )
+
+    assert not failures, "\n\n".join(failures)

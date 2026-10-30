@@ -4,7 +4,11 @@ Auto-loaded at the start of every Claude Code session in this repo. Intentionall
 
 ## What this repository is
 
-A web product — Node.js HTTP backend, browser frontend — built end-to-end by Claude Code. A human steers; agents execute. There is no human-written application code in `src/`. Engineering work happens through ExecPlans under `docs/plans/`, structural tests under `.claude/tests/`, hooks under `.claude/hooks/`, and skills under `.claude/skills/`. Collectively: the **harness**.
+A web product — Node.js HTTP backend, browser frontend — built end-to-end by Claude Code. A human steers; agents execute. Engineering work happens through ExecPlans under `docs/plans/`, structural tests under `tests/structural/`, hooks under `.claude/hooks/`, and skills under `.claude/skills/`. Collectively: the **harness**.
+
+**Greenfield mode** (default): `src/` is created by feature ExecPlans, never by hand. There is no human-written application code in `src/`.
+
+**Brownfield mode**: the repo has existing application code. Enforcement is scoped to harness-managed regions declared in `.claude/harness-scope.json`. See `docs/conventions/brownfield-adoption.md` for the beachhead + baseline + ratchet pattern. Check the scope file before assuming any rule is repo-wide.
 
 ## The split
 
@@ -20,6 +24,7 @@ A web product — Node.js HTTP backend, browser frontend — built end-to-end by
 - `docs/conventions/deps-and-secrets.md` — how new dependencies and secrets are handled.
 - `docs/conventions/commit-hygiene.md` — commit message format.
 - `docs/conventions/i-dont-know-protocol.md` — how to handle uncertainty in Decision Logs.
+- `docs/conventions/brownfield-adoption.md` — how to adopt the harness in an existing codebase (beachhead, baselines, ratchets).
 
 ## First action on every session
 

@@ -39,10 +39,36 @@ def vet_filename(dep: str) -> str:
     return f"dep-vet-{sanitized}.md"
 
 
+def amnesty_packages() -> set[str]:
+    """Return packages listed in dep-amnesty baselines as pre-existing."""
+    from tests.structural.scope_helpers import _load_scope
+
+    scope = _load_scope()
+    if scope.get("mode") != "brownfield":
+        return set()
+
+    amnesty_files = [
+        f for f in DECISIONS_DIR.glob("dep-baseline-*.md")
+        if f.name.startswith("dep-baseline-")
+    ]
+    packages: set[str] = set()
+    for f in amnesty_files:
+        text = f.read_text(encoding="utf-8")
+        for line in text.splitlines():
+            stripped = line.strip()
+            if stripped.startswith("- ") and not stripped.startswith("- #"):
+                pkg = stripped[2:].split()[0]
+                packages.add(pkg)
+    return packages
+
+
 def test_each_dep_has_decision_and_vet():
     failures: list[str] = []
     plan_text = all_plan_text()
+    amnesty = amnesty_packages()
     for dep in collected_deps():
+        if dep in amnesty:
+            continue
         vet = DECISIONS_DIR / vet_filename(dep)
         if not vet.exists():
             failures.append(
